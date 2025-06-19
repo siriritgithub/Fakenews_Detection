@@ -1,0 +1,5 @@
+headline,prediction,confidence,feedback
+"India wins the Cricket World Cup",1,95.0,positive
+"Aliens land in Canada and shake hands with PM",0,85.0,negative
+"Narendra Modi is the Prime Minister of India",1,88.0,positive
+"Chocolate cures cancer instantly",0,90.0,negative
