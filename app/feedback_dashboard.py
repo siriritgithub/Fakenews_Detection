@@ -1,11 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
+import os
 
-def show_feedback_dashboard():
+def display_feedback_dashboard():
     st.title("📊 Feedback Insights Dashboard")
 
-    feedback_file = r"C:\fake-news-detection\app\feedback_log.csv"
+    feedback_file = os.path.join("app", "feedback_log.csv")
 
     try:
         df = pd.read_csv(feedback_file)
@@ -13,7 +14,7 @@ def show_feedback_dashboard():
         # Drop rows with missing feedback
         df = df.dropna(subset=["feedback"])
 
-        # Ensure feedback values are lowercase for consistency
+        # Normalize feedback values
         df["feedback"] = df["feedback"].str.lower().str.strip()
 
         # Count feedback types
@@ -21,7 +22,7 @@ def show_feedback_dashboard():
         neg = int((df["feedback"] == "negative").sum())
 
         if pos + neg == 0:
-            st.warning("⚠️ No valid feedback data found yet. Try giving some feedback first.")
+            st.warning("⚠️ No valid feedback data found yet.")
             return
 
         # Pie chart
@@ -30,7 +31,7 @@ def show_feedback_dashboard():
         ax1.axis("equal")
         st.pyplot(fig)
 
-        st.write("### Raw Feedback Data")
+        st.write("### 📝 Raw Feedback Data")
         st.dataframe(df)
 
     except FileNotFoundError:
