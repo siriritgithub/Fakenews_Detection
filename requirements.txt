@@ -7,3 +7,4 @@ requests
 dateparser
 python-dotenv
 wikipedia
+matplotlib
