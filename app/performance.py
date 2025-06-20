@@ -1,20 +1,25 @@
-# app/performance.py
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
+import os
 import joblib
 
 def show_model_performance():
+    # Use relative paths
+    data_path = os.path.join("data", "politifact_cleaned.csv")
+    vectorizer_path = os.path.join("models", "tfidf_vectorizer.pkl")
+    model_path = os.path.join("models", "logistic_model.pkl")
+
     # Load data
-    df = pd.read_csv(r"C:\fake-news-detection\data\politifact_cleaned.csv")
+    df = pd.read_csv(data_path)
 
     # Prepare data
     df = df.dropna(subset=["clean_title"])
-    vectorizer = joblib.load(r"C:\fake-news-detection\models\tfidf_vectorizer.pkl")
-    model = joblib.load(r"C:\fake-news-detection\models\logistic_model.pkl")
+    vectorizer = joblib.load(vectorizer_path)
+    model = joblib.load(model_path)
 
     X = vectorizer.transform(df["clean_title"])
     y = df["label"]
@@ -32,7 +37,8 @@ def show_model_performance():
     st.markdown("### 🔁 Confusion Matrix")
     cm = confusion_matrix(y_test, y_pred)
     fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Fake', 'Real'], yticklabels=['Fake', 'Real'], ax=ax)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=['Fake', 'Real'], yticklabels=['Fake', 'Real'], ax=ax)
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
     st.pyplot(fig)
