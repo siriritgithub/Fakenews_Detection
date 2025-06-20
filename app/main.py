@@ -1,5 +1,4 @@
 import streamlit as st
-import joblib
 from get_news import fetch_news
 from get_weather import get_weather
 from get_cricket import validate_cricket_fact
