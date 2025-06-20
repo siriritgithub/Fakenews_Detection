@@ -7,12 +7,12 @@ import joblib
 from get_news import fetch_news
 from get_weather import get_weather
 from get_cricket import validate_cricket_fact
-from get_facts import check_fact_wikipedia
+from get_facts import check_fact  # ✅ Updated import
 from performance import display_model_performance
 from save_feedback import save_feedback
 from feedback_dashboard import display_feedback_dashboard
 
-# Use relative paths
+# File paths (relative)
 model_path = os.path.join("models", "logistic_model.pkl")
 vectorizer_path = os.path.join("models", "tfidf_vectorizer.pkl")
 feedback_path = os.path.join("app", "feedback_log.csv")
@@ -64,11 +64,8 @@ with tab2:
     fact = st.text_input("Enter a fact or statement to verify:")
     if st.button("Check Fact"):
         if fact:
-            summary, url = check_fact_wikipedia(fact)
-            st.write("🔎 Closest Wikipedia Summary:")
-            st.info(summary or "Not found.")
-            if url:
-                st.markdown(f"[Read on Wikipedia]({url})")
+            result = check_fact(fact)  # ✅ Updated usage
+            st.write(result)
 
 # 🏏 Cricket Fact Tab
 with tab3:
