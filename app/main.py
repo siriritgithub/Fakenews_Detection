@@ -1,138 +1,99 @@
 import streamlit as st
+import pandas as pd
+import numpy as np
+import os
+import joblib
+
 from get_news import fetch_news
 from get_weather import get_weather
 from get_cricket import validate_cricket_fact
-from get_facts import check_fact
+from get_facts import check_fact_wikipedia
+from performance import display_model_performance
 from save_feedback import save_feedback
-from performance import show_model_performance
-from feedback_dashboard import show_feedback_dashboard
-import os
+from feedback_dashboard import display_feedback_dashboard
 
-# Load model and vectorizer
-model_path = r"C:\fake-news-detection\models\logistic_model.pkl"
-vectorizer_path = r"C:\fake-news-detection\models\tfidf_vectorizer.pkl"
-model = joblib.load(model_path)
-vectorizer = joblib.load(vectorizer_path)
+# Use relative paths
+model_path = os.path.join("models", "logistic_model.pkl")
+vectorizer_path = os.path.join("models", "tfidf_vectorizer.pkl")
+feedback_path = os.path.join("app", "feedback_log.csv")
 
-# Page config
-st.set_page_config(
-    page_title="Fake News Detection App",
-    page_icon="📰",
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
+@st.cache_resource
+def load_model():
+    model = joblib.load(model_path)
+    vectorizer = joblib.load(vectorizer_path)
+    return model, vectorizer
 
-# Title
+model, vectorizer = load_model()
+
+st.set_page_config(page_title="📰 Fake News Detection App", layout="wide")
 st.title("📰 Fake News Detection App")
-st.subheader("Classify headlines, validate facts, search live news, weather & cricket updates!")
 
-# --- Section 1: Fake News Classifier ---
-st.markdown("### 🧠 Fake News Classifier (Custom Headline)")
-headline = st.text_input("📩 Enter a headline manually")
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🔍 News Check", "🧪 General Fact Check", "🏏 Cricket Fact", "📊 Performance", "📋 Feedback"
+])
 
-if st.button("Predict"):
-    if headline.strip() == "":
-        st.warning("⚠️ Please enter a headline.")
-    else:
-        vector_input = vectorizer.transform([headline])
-        prediction = model.predict(vector_input)[0]
-        confidence = model.predict_proba(vector_input).max() * 100
+# 🔍 News Check Tab
+with tab1:
+    st.subheader("Check if a News Article is Fake or Real")
+    user_input = st.text_area("Enter News Text", height=150)
 
-        if prediction == 1:
-            st.success(f"✅ Prediction: 🟢 Real News ({confidence:.2f}% confidence)")
-        else:
-            st.error(f"❌ Prediction: 🔴 Fake News ({confidence:.2f}% confidence)")
+    if st.button("Predict"):
+        if user_input.strip():
+            input_vector = vectorizer.transform([user_input])
+            prediction = model.predict(input_vector)[0]
+            st.success("✅ This is Real News!" if prediction == 1 else "❌ This is Fake News!")
 
-        st.markdown("---")
-        st.write("Was this prediction correct?")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("👍 Yes"):
-                save_feedback(headline, prediction, confidence, "positive")
-                st.toast("Thanks for your feedback! 🙏", icon="🟢")
-        with col2:
-            if st.button("👎 No"):
-                save_feedback(headline, prediction, confidence, "negative")
-                st.toast("Got it! We'll use this to improve. 💡", icon="🔴")
-
-# --- Section 2: Smart Assistant ---
-st.markdown("---")
-st.markdown("### 🤖 Smart Assistant — Ask Me Anything")
-
-query = st.text_input("💬 Ask a question or statement (e.g., 'weather in Mumbai', 'CSK won', 'Modi is PM')")
-
-if st.button("🚀 Run Smart Check"):
-    if query.strip() == "":
-        st.warning("⚠️ Please enter something.")
-    else:
-        if "weather" in query.lower():
-            weather_info = get_weather(query)
-            st.info(weather_info)
-
-        elif any(team in query.upper() for team in ["CSK", "KKR", "MI", "RCB", "GT", "LSG", "SRH", "RR", "DC", "PBKS"]):
-            result = validate_cricket_fact(query)
-            st.info(result)
-
-        elif any(query.lower().startswith(x) for x in ["who", "what", "when", "is", "was", "are"]):
-            fact_result = check_fact(query)
-            st.info(fact_result)
-
-        else:
-            headlines = fetch_news(query)
-            if not headlines or "Error" in headlines[0] or "⚠️" in headlines[0]:
-                st.warning(headlines[0] if headlines else "No news articles found.")
+    st.markdown("---")
+    st.subheader("Or Search Live News")
+    query = st.text_input("Enter search topic:")
+    if st.button("Fetch Live News"):
+        if query.strip():
+            articles = fetch_news(query)
+            if articles:
+                for article in articles:
+                    st.write(f"**{article['title']}**")
+                    st.write(article['description'] or "No description.")
+                    st.markdown(f"[Read More]({article['url']})")
+                    st.markdown("---")
             else:
-                selected = st.selectbox("🗞️ Choose a headline to analyze", headlines)
-                if st.button("🧠 Check Selected Headline"):
-                    input_vector = vectorizer.transform([selected])
-                    prediction = model.predict(input_vector)[0]
-                    confidence = model.predict_proba(input_vector).max() * 100
+                st.warning("No articles found.")
 
-                    if prediction == 1:
-                        st.success(f"✅ Prediction: 🟢 Real News ({confidence:.2f}% confidence)")
-                    else:
-                        st.error(f"❌ Prediction: 🔴 Fake News ({confidence:.2f}% confidence)")
+# 🧪 General Fact Check Tab
+with tab2:
+    st.subheader("Wikipedia Fact Check")
+    fact = st.text_input("Enter a fact or statement to verify:")
+    if st.button("Check Fact"):
+        if fact:
+            summary, url = check_fact_wikipedia(fact)
+            st.write("🔎 Closest Wikipedia Summary:")
+            st.info(summary or "Not found.")
+            if url:
+                st.markdown(f"[Read on Wikipedia]({url})")
 
-# --- Section 3: Model Performance ---
-st.markdown("---")
-st.markdown("### 📈 Model Performance Dashboard")
+# 🏏 Cricket Fact Tab
+with tab3:
+    st.subheader("Validate Cricket Match Result")
+    match_fact = st.text_input("Enter cricket-related statement:")
+    if st.button("Validate Cricket Fact"):
+        result = validate_cricket_fact(match_fact)
+        if result:
+            st.success("✅ Fact validated.")
+            st.info(result)
+        else:
+            st.warning("⚠️ Could not validate the fact. Try rephrasing.")
 
-if st.button("📊 Show Model Metrics"):
-    show_model_performance()
+# 📊 Model Performance
+with tab4:
+    st.subheader("Model Performance")
+    display_model_performance()
 
-# --- Section 4: Feedback Stats ---
-st.markdown("---")
-st.markdown("### 📊 Feedback Insights Dashboard")
+# 📋 Feedback Tab
+with tab5:
+    st.subheader("Feedback")
+    feedback = st.text_area("Leave your feedback about the app:")
+    if st.button("Submit Feedback"):
+        save_feedback(feedback, feedback_path)
+        st.success("Thank you for your feedback! ✅")
 
-if st.button("📈 Show Feedback Stats"):
-    show_feedback_dashboard()
-
-# --- Section 5: Download Feedback CSV ---
-st.markdown("---")
-st.markdown("### 📥 Download Feedback Log")
-
-feedback_path = r"C:\fake-news-detection\app\feedback_log.csv"
-
-try:
-    with open(feedback_path, "rb") as f:
-        st.download_button(
-            label="📁 Download Feedback as CSV",
-            data=f,
-            file_name="feedback_log.csv",
-            mime="text/csv"
-        )
-except FileNotFoundError:
-    st.warning("⚠️ No feedback log found yet.")
-
-# --- Section 6: Retrain Model from Feedback ---
-st.markdown("---")
-st.markdown("### 🔁 Retrain Model Using Feedback")
-
-if st.button("🧠 Retrain Now"):
-    with st.spinner("Retraining model from feedback..."):
-        try:
-            import subprocess
-            subprocess.run(["python", "app/retrain_from_feedback.py"], check=True)
-            st.success("✅ Model retrained successfully! Please refresh the app.")
-        except Exception as e:
-            st.error(f"❌ Retraining failed: {e}")
+    st.markdown("### Previous Feedback")
+    display_feedback_dashboard(feedback_path)
