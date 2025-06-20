@@ -8,3 +8,4 @@ dateparser
 python-dotenv
 wikipedia
 matplotlib
+seaborn
